@@ -2,6 +2,12 @@
 
 Utility for Gitlab snippets.
 
+# Installation
+
+```
+# npm install gitlab-snippet -g
+```
+
 # Usage
 
 Configuration is passed through configuration file, environment variables, and the command line arguments.
