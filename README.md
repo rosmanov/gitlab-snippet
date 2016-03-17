@@ -15,7 +15,7 @@ Configuration is passed through configuration file, environment variables, and t
 ## Configuration File
 
 Path to the configuration file is passed via `-c (--config)` command line argument.
-Default path is `$HOME/.configitlab-snippet.json`.
+Default path is `$HOME/.config/gitlab-snippet.json`.
 
 ### Format
 
