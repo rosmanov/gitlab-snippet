@@ -7,6 +7,7 @@
 
 var ARGV = require('minimist')(process.argv.slice(2));
 var FS = require('fs');
+var PATH = require('path');
 var REQUEST = require('request');
 
 var GITLAB_API_TOKEN; // Access token
@@ -133,7 +134,8 @@ function onAccessFile(err) {
  */
 function onCreateSnippet(r) {
   if (r.id === undefined) {
-    fatalError("Failed to parse response: " + body);
+    //console.log("onCreateSnippet", arguments);
+    fatalError("Failed to parse response" + (r.message));
   }
 
   console.log('http://' + GITLAB_API_HOST + '/' + PROJECT_PATH_WITH_NAMESPACE  + '/snippets/' + r.id);
@@ -175,6 +177,27 @@ function callbackCall(callback, json) {
   }
 }
 
+/**
+ * @param String json
+ * @return Void
+ */
+function handleBadRequestError(json) {
+  try {
+    var msg, err, k;
+
+    err = JSON.parse(json);
+
+    console.error("!! Bad Request");
+    for (k in err.message) {
+      msg = err.message[k];
+      console.error(k + ": " + msg.toString());
+    }
+    fatalError("Aborted");
+  } catch (e) {
+    fatalError("Failed to handle bad request error: " + e.message);
+  }
+}
+
 function createSnippet(projectId, filename, callback) {
   var url, data, code, suffix;
 
@@ -186,7 +209,7 @@ function createSnippet(projectId, filename, callback) {
     data = {
       id: projectId,
       title: filename,
-      file_name: filename + suffix,
+      file_name: PATH.basename(filename + suffix),
       visibility_level: VISIBILITY_LEVEL,
       code: code
     };
@@ -198,9 +221,11 @@ function createSnippet(projectId, filename, callback) {
     }, function (error, res, body) {
       if (error) {
         fatalError('upload failed: ', error);
+      } else if (res.statusCode == 400) {
+        handleBadRequestError(body);
+      } else {
+        callbackCall(callback, body);
       }
-
-      callbackCall(callback, body);
     });
   }
 
@@ -235,8 +260,10 @@ function getProject(id, callback) {
   }, function (error, res, body) {
     if (error) {
       fatalError('failed to get project '  + id + ': ', error);
+    } else if (res.statusCode == 400) {
+      handleBadRequestError(body);
+    } else {
+      callbackCall(callback, body);
     }
-
-    callbackCall(callback, body);
   });
 }
