@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Utility for Gitlab snippets",
   "main": "index.js",
-  "bin": "./gitlab-snippet",
+  "bin": {
+    "gitlab-snippet": "./index.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://osmanov@bitbucket.org/osmanov/gitlab-snippet.git"
