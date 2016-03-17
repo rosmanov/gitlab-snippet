@@ -4,6 +4,10 @@
   "description": "Utility for Gitlab snippets",
   "main": "index.js",
   "bin": "./gitlab-snippet",
+  "repository": {
+    "type": "git",
+    "url": "https://osmanov@bitbucket.org/osmanov/gitlab-snippet.git"
+  },
   "dependencies": {
     "minimist": "^1.2.0",
     "request": "^2.69.0"
