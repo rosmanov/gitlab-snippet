@@ -1,0 +1,12 @@
+tags
+
+*.tgz
+*.in
+*.l[a,o]
+*.sw[p,o]
+*~
+*.deps
+*.libs
+*.log
+
+node_modules
