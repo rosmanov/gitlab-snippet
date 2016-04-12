@@ -242,7 +242,7 @@ function createSnippet(projectId, filename, callback) {
     });
     process.stdin.on('end', post);
   } else {
-    code = FS.createReadStream(filename);
+    code = FS.readFileSync(filename, 'utf8');
     post();
   }
 }
