@@ -4,6 +4,7 @@
  * @author Ruslan Osmanov <rrosmanov@gmail.com>
  * @copyright Megagroup.ru 2016
  */
+'use strict';
 
 var ARGV = require('minimist')(process.argv.slice(2));
 var FS = require('fs');
@@ -71,7 +72,7 @@ function usage(exitCode) {
  * @param Integer errCode
  */
 function fatalError(msg, errCode) {
-  console.error(msg, errCode || 0)
+  console.error(msg, errCode || 0);
   process.exit(1);
 }
 
@@ -199,7 +200,7 @@ function handleBadRequestError(json) {
 }
 
 function createSnippet(projectId, filename, callback) {
-  var url, data, code, suffix;
+  var url, data, code = '', suffix;
 
   url = GITLAB_API_URL + '/projects/' + projectId + '/snippets';
 
@@ -230,7 +231,6 @@ function createSnippet(projectId, filename, callback) {
   }
 
   if (filename == '-') {
-    code = '';
     filename = 'stdin';
 
     process.stdin.setEncoding('utf8');
@@ -242,8 +242,13 @@ function createSnippet(projectId, filename, callback) {
     });
     process.stdin.on('end', post);
   } else {
-    code = FS.createReadStream(filename);
-    post();
+    var stream = FS.createReadStream(filename);
+    stream.on('data', function (chunk) {
+      if (chunk !== null) {
+        code += chunk;
+      }
+    });
+    stream.on('end', post);
   }
 }
 
