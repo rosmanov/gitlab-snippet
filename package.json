@@ -1,6 +1,6 @@
 {
   "name": "gitlab-snippet",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Utility for Gitlab snippets",
   "main": "index.js",
   "bin": {
