@@ -14,12 +14,14 @@ var REQUEST = require('request');
 var GITLAB_API_TOKEN; // Access token
 var GITLAB_API_HOST; // Gitlab hostname
 var GITLAB_API_URL;
+var AGENT_OPTIONS = {};
 var VISIBILITY_LEVEL = 20; // Snippet visibility (20 - public)
 var FILENAME; // Source file path
 var DEFAULT_CONF_FILE = process.env.HOME + '/.config/gitlab-snippet.json';
 var CONF_FILE; // Configuration file path
 var PROJECT_PATH_WITH_NAMESPACE; // Gitlab project path with namespace, e.g. 'path/ns'
 var LANG; // Source file programming language
+var GITLAB_API_PROTO = 'http';
 
 
 if (ARGV.h === true || ARGV.help === true) {
@@ -76,6 +78,13 @@ function fatalError(msg, errCode) {
   process.exit(1);
 }
 
+function expandHome(filepath) {
+    if (filepath[0] === '~') {
+        return PATH.join(process.env.HOME, filepath.slice(1));
+    }
+    return filepath;
+}
+
 function run() {
   CONF_FILE = ARGV.c || ARGV.config || DEFAULT_CONF_FILE;
   FS.access(CONF_FILE, FS.R_OK, onAccessConfigFile);
@@ -88,11 +97,14 @@ function run() {
  */
 function onAccessConfigFile(err) {
   var conf;
+  // 'agent' configuration SSL/TLS keys containing a file system path
+  var agentSecureFsKeys = ['ca', 'cert', 'key', 'pfx'];
 
   if (!err) {
     conf = require(CONF_FILE);
     GITLAB_API_TOKEN = conf.token;
     GITLAB_API_HOST = conf.host;
+    AGENT_OPTIONS = conf.agentOptions || {};
     if (!PROJECT_PATH_WITH_NAMESPACE && conf.project !== undefined) {
       PROJECT_PATH_WITH_NAMESPACE = conf.project;
     }
@@ -110,7 +122,20 @@ function onAccessConfigFile(err) {
     fatalError('failed to fetch API host from configuration');
   }
 
-  GITLAB_API_URL = 'http://' + GITLAB_API_HOST + '/api/v3';
+  for (var i in agentSecureFsKeys) {
+    var key = agentSecureFsKeys[i];
+    if (AGENT_OPTIONS[key] === undefined) {
+      continue;
+    }
+    AGENT_OPTIONS[key] = FS.readFileSync(
+      PATH.resolve(expandHome(AGENT_OPTIONS[key]))
+    );
+  }
+  if (Object.getOwnPropertyNames(agentSecureFsKeys).length) {
+    GITLAB_API_PROTO = 'https';
+  }
+
+  GITLAB_API_URL = GITLAB_API_PROTO + '://' + GITLAB_API_HOST + '/api/v3';
 
   FILENAME = ARGV._[0];
   FS.access(FILENAME, FS.R_OK, onAccessFile);
@@ -136,10 +161,10 @@ function onAccessFile(err) {
 function onCreateSnippet(r) {
   if (r.id === undefined) {
     //console.log("onCreateSnippet", arguments);
-    fatalError("Failed to parse response" + (r.message));
+    fatalError("Failed to parse response " + (r.message));
   }
 
-  console.log('http://' + GITLAB_API_HOST + '/' + PROJECT_PATH_WITH_NAMESPACE  + '/snippets/' + r.id);
+  console.log(GITLAB_API_PROTO + '://' + GITLAB_API_HOST + '/' + PROJECT_PATH_WITH_NAMESPACE  + '/snippets/' + r.id);
 }
 
 /**
@@ -159,7 +184,9 @@ function onGetProject(r) {
  */
 function getCommonHttpHeaders() {
   return {
-    "PRIVATE-TOKEN": GITLAB_API_TOKEN
+    "PRIVATE-TOKEN": GITLAB_API_TOKEN,
+    'User-Agent': 'request',
+
   };
 }
 
@@ -174,7 +201,7 @@ function callbackCall(callback, json) {
     }
     callback(json);
   } catch (e) {
-    fatalError("failed to parse JSON: " + e.message);
+    fatalError("failed to parse JSON: " + e.message + ", source: " + json);
   }
 }
 
@@ -218,7 +245,8 @@ function createSnippet(projectId, filename, callback) {
     REQUEST.post({
       url: url,
       formData: data,
-      headers: getCommonHttpHeaders()
+      headers: getCommonHttpHeaders(),
+      agentOptions: AGENT_OPTIONS
     }, function (error, res, body) {
       if (error) {
         fatalError('upload failed: ', error);
@@ -261,7 +289,8 @@ function getProject(id, callback) {
 
   REQUEST.get({
     url: url,
-    headers: getCommonHttpHeaders()
+    headers: getCommonHttpHeaders(),
+    agentOptions: AGENT_OPTIONS
   }, function (error, res, body) {
     if (error) {
       fatalError('failed to get project '  + id + ': ', error);
